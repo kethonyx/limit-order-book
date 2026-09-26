@@ -12,7 +12,9 @@ FetchContent_MakeAvailable(googletest)
 add_executable(lob_tests
     types_test.cpp
     order_book_test.cpp
-    parser_test.cpp)
+    parser_test.cpp
+    edge_cases_test.cpp
+    randomized_test.cpp)
 target_link_libraries(lob_tests PRIVATE lob::lob GTest::gtest_main)
 lob_set_warnings(lob_tests)
 
