@@ -1,0 +1,58 @@
+# Phase 5 baseline: std::list per level + std::unordered_map index
+# commit: 2d18398 + uncommitted bench harness
+# date: 2026-09-26T12:23Z
+# machine: MacBookPro17,1, Apple M1, 8 cores (4 P + 4 E), 8 GB RAM
+# os: macOS 26.3.1; compiler: Apple clang version 17.0.0 (clang-1700.0.13.3)
+# conditions: on battery, load average ~5 (desktop apps running) -> expect noise between invocations
+# build: cmake --preset release (-O3, NDEBUG); cmd: ./build/release/bench/lob_bench (1M ops, 5 runs)
+
+=== invocation 1 ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 6421942, best 7821442, worst 5861174
+Mean time per op (median run): 155.7 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       84      333      625     1167    7001542
+  limit        548859       84      208      417      792    7001542
+  market       100611       84      250      542     1208     213375
+  cancel       350530      125      417      708     3000     233500
+
+(checksum 63991480)
+
+=== invocation 2 ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 6290612, best 8557980, worst 5224359
+Mean time per op (median run): 159.0 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       84      292      666     1041    9401458
+  limit        548859       84      208      417      708    9401458
+  market       100611       84      250      542     1125     220792
+  cancel       350530       84      458      791     1125     124084
+
+(checksum 63991480)
+
+=== invocation 3 ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 6409674, best 6740927, worst 4758546
+Mean time per op (median run): 156.0 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       84      334      625      958    8166958
+  limit        548859       84      208      417      708    8166958
+  market       100611       84      250      542     1042      13709
+  cancel       350530      125      459      709     1083     268042
+
+(checksum 63991480)

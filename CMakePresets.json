@@ -21,7 +21,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "LOB_SANITIZE": "OFF",
         "LOB_BUILD_TESTS": "ON",
-        "LOB_BUILD_BENCH": "OFF"
+        "LOB_BUILD_BENCH": "ON"
       }
     }
   ],
