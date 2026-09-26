@@ -24,7 +24,8 @@ include(Sanitizers)
 
 # --- Core library -----------------------------------------------------------
 add_library(lob STATIC
-    src/types.cpp)
+    src/types.cpp
+    src/order_book.cpp)
 add_library(lob::lob ALIAS lob)
 
 target_include_directories(lob PUBLIC
