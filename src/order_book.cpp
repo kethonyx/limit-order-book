@@ -38,20 +38,41 @@ ExecResult OrderBook::add(const Order& order, std::vector<Trade>& trades) {
     return result;
 }
 
+void OrderBook::Level::push_back(OrderNode* node) noexcept {
+    node->prev = tail;
+    node->next = nullptr;
+    if (tail != nullptr) {
+        tail->next = node;
+    } else {
+        head = node;
+    }
+    tail = node;
+    ++count;
+    total_qty += node->order.qty;
+}
+
+void OrderBook::Level::unlink(OrderNode* node) noexcept {
+    (node->prev != nullptr ? node->prev->next : head) = node->next;
+    (node->next != nullptr ? node->next->prev : tail) = node->prev;
+    --count;
+    total_qty -= node->order.qty;
+}
+
 Status OrderBook::cancel(OrderId id) {
     const auto found = index_.find(id);
     if (found == index_.end()) return Status::UnknownId;
 
-    auto [level, order_it] = found->second;
-    const Side side = order_it->side;
-    const Price price = order_it->price;
+    OrderNode* node = found->second;
+    Level* level = node->level;
+    const Side side = node->order.side;
+    const Price price = node->order.price;
 
-    level->total_qty -= order_it->qty;
-    level->orders.erase(order_it);  // O(1): we hold the iterator
+    level->unlink(node);  // O(1): the node knows its neighbours
     index_.erase(found);
+    pool_.release(node);
 
     // Empty levels are removed so best_bid/best_ask stay O(1) via begin().
-    if (level->orders.empty()) {
+    if (level->empty()) {
         if (side == Side::Buy) {
             bids_.erase(price);
         } else {
@@ -67,18 +88,18 @@ ExecResult OrderBook::modify(OrderId id, Price new_price, Qty new_qty, std::vect
     if (new_qty <= 0) return {.status = Status::InvalidQty};
     if (new_price <= 0) return {.status = Status::InvalidPrice};
 
-    auto [level, order_it] = found->second;
+    OrderNode* node = found->second;
 
     // Reducing size at the same price does not disadvantage anyone queued
     // behind, so the order keeps its place.
-    if (new_price == order_it->price && new_qty <= order_it->qty) {
-        level->total_qty -= order_it->qty - new_qty;
-        order_it->qty = new_qty;
+    if (new_price == node->order.price && new_qty <= node->order.qty) {
+        node->level->total_qty -= node->order.qty - new_qty;
+        node->order.qty = new_qty;
         return {.status = Status::Accepted, .rested = new_qty};
     }
 
     // Price change or size increase: goes to the back of the queue.
-    Order replacement = *order_it;
+    Order replacement = node->order;
     replacement.price = new_price;
     replacement.qty = new_qty;
     cancel(id);
@@ -97,8 +118,9 @@ Qty OrderBook::match(Levels& levels, Order& incoming, Crosses crosses, std::vect
 
         Level& level = level_it->second;
         // Within a level, fill oldest orders first (time priority).
-        while (incoming.qty > 0 && !level.orders.empty()) {
-            Order& resting = level.orders.front();
+        while (incoming.qty > 0 && !level.empty()) {
+            OrderNode* node = level.head;
+            Order& resting = node->order;
             const Qty q = std::min(incoming.qty, resting.qty);
 
             // Trade executes at the resting order's price: the resting order
@@ -115,12 +137,13 @@ Qty OrderBook::match(Levels& levels, Order& incoming, Crosses crosses, std::vect
             filled += q;
 
             if (resting.qty == 0) {
+                level.unlink(node);  // qty is 0 now, so total_qty is unaffected
                 index_.erase(resting.id);
-                level.orders.pop_front();
+                pool_.release(node);
             }
         }
 
-        if (level.orders.empty()) levels.erase(level_it);
+        if (level.empty()) levels.erase(level_it);
     }
     return filled;
 }
@@ -129,9 +152,9 @@ template <class Levels>
 void OrderBook::rest(Levels& levels, const Order& order) {
     // operator[] creates the level if missing: O(log L) either way.
     Level& level = levels[order.price];
-    level.orders.push_back(order);
-    level.total_qty += order.qty;
-    index_.emplace(order.id, Locator{&level, std::prev(level.orders.end())});
+    OrderNode* node = pool_.acquire(OrderNode{.order = order, .prev = nullptr, .next = nullptr, .level = &level});
+    level.push_back(node);
+    index_.emplace(order.id, node);
 }
 
 std::optional<Price> OrderBook::best_bid() const {
@@ -158,7 +181,7 @@ std::vector<LevelView> OrderBook::depth(Side side, std::size_t max_levels) const
         out.reserve(std::min(max_levels, levels.size()));
         for (const auto& [price, level] : levels) {
             if (out.size() == max_levels) break;
-            out.push_back({.price = price, .qty = level.total_qty, .orders = level.orders.size()});
+            out.push_back({.price = price, .qty = level.total_qty, .orders = level.count});
         }
         return out;
     };

@@ -1,0 +1,274 @@
+# Phase 6: before/after, interleaved (baseline, pool, pool+reserve) x 5 rounds
+#   baseline     = commit c3c7412 (std::list per level)
+#   pool         = this commit, OrderBook{} (intrusive list + ObjectPool)
+#   pool+reserve = this commit, OrderBook{262144} (index pre-sized; bench arg 3)
+# date: 2026-09-26T12:26Z
+# machine: MacBookPro17,1, Apple M1, 8 cores (4 P + 4 E), 8 GB RAM
+# os: macOS 26.3.1; compiler: Apple clang version 17.0.0 (clang-1700.0.13.3)
+# conditions: 'Battery Power', load averages: 3.65 4.78 4.73
+# build: cmake --preset release (-O3, NDEBUG); each invocation = 1M ops, warm-up + 5 throughput runs + 1 latency run
+
+=== round 1: baseline ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 10931152, best 11079580, worst 10787487
+Mean time per op (median run): 91.5 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       83      166      291      417    2163041
+  limit        548859       83      125      250      417    2163041
+  market       100611       83      208      333      458       6666
+  cancel       350530       42      125      250      375      29625
+
+(checksum 63991480)
+
+=== round 1: pool ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 0
+
+Throughput over 5 runs (ops/sec): median 14581785, best 14649555, worst 14505604
+Mean time per op (median run): 68.6 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      209      292     968541
+  limit        548859       42      125      208      292     968541
+  market       100611       42      166      250      334      12292
+  cancel       350530       42      125      209      292       4625
+
+(checksum 63991480)
+
+=== round 1: pool+reserve ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 262144
+
+Throughput over 5 runs (ops/sec): median 17604239, best 17948971, worst 15570493
+Mean time per op (median run): 56.8 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42       84      209      333      28375
+  limit        548859       42       84      167      250      28375
+  market       100611       42      125      208      292       9875
+  cancel       350530       42      125      250      375      13375
+
+(checksum 63991480)
+
+=== round 2: baseline ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 11078072, best 11095644, worst 10804153
+Mean time per op (median run): 90.3 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       83      125      250      417    2310250
+  limit        548859       83      125      250      458    2310250
+  market       100611       83      208      333      458      11208
+  cancel       350530       42      125      250      334       8583
+
+(checksum 63991480)
+
+=== round 2: pool ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 0
+
+Throughput over 5 runs (ops/sec): median 14492509, best 14644782, worst 14325767
+Mean time per op (median run): 69.0 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      209      333    1028666
+  limit        548859       42      125      208      292    1028666
+  market       100611       42      166      250      334       4625
+  cancel       350530       42      125      250      333       5042
+
+(checksum 63991480)
+
+=== round 2: pool+reserve ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 262144
+
+Throughput over 5 runs (ops/sec): median 17821500, best 17985072, worst 17720861
+Mean time per op (median run): 56.1 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      250      375      37459
+  limit        548859       42       84      167      250      37459
+  market       100611       42      125      209      292       1167
+  cancel       350530       42      125      291      416       7792
+
+(checksum 63991480)
+
+=== round 3: baseline ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 11126116, best 11150940, worst 10688904
+Mean time per op (median run): 89.9 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       83      166      292      500    4222125
+  limit        548859       83      166      250      459    4222125
+  market       100611       83      208      333      458       3417
+  cancel       350530       42      125      333      542      12541
+
+(checksum 63991480)
+
+=== round 3: pool ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 0
+
+Throughput over 5 runs (ops/sec): median 14532534, best 14560836, worst 14270246
+Mean time per op (median run): 68.8 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      209      333     994584
+  limit        548859       42      125      208      292     994584
+  market       100611       42      167      250      334       7583
+  cancel       350530       42      125      250      333      17708
+
+(checksum 63991480)
+
+=== round 3: pool+reserve ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 262144
+
+Throughput over 5 runs (ops/sec): median 17064313, best 17964166, worst 16187527
+Mean time per op (median run): 58.6 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      250      375      19208
+  limit        548859       42       84      167      250      19208
+  market       100611       42      125      208      292        542
+  cancel       350530       42      125      292      417       7041
+
+(checksum 63991480)
+
+=== round 4: baseline ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 10703129, best 11057268, worst 9985430
+Mean time per op (median run): 93.4 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       83      166      291      417    2483333
+  limit        548859       83      125      250      417    2483333
+  market       100611       83      208      333      458       6167
+  cancel       350530       42      125      250      458       9959
+
+(checksum 63991480)
+
+=== round 4: pool ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 0
+
+Throughput over 5 runs (ops/sec): median 14082540, best 14576047, worst 13218676
+Mean time per op (median run): 71.0 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      250      375    1235459
+  limit        548859       42      125      208      292    1235459
+  market       100611       42      166      250      375       2416
+  cancel       350530       42      125      250      417      15833
+
+(checksum 63991480)
+
+=== round 4: pool+reserve ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 262144
+
+Throughput over 5 runs (ops/sec): median 17842646, best 18026057, worst 17806876
+Mean time per op (median run): 56.0 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42       84      208      292      24083
+  limit        548859       42       84      167      250      21042
+  market       100611       42      125      208      292        541
+  cancel       350530       42      125      250      334      24083
+
+(checksum 63991480)
+
+=== round 5: baseline ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+
+Throughput over 5 runs (ops/sec): median 10967829, best 11058685, worst 10889490
+Mean time per op (median run): 91.2 ns
+Heap allocations: 1.099 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       83      166      291      417    2290291
+  limit        548859       83      166      250      417    2290291
+  market       100611       83      208      333      458       8917
+  cancel       350530       42      125      250      375       7000
+
+(checksum 63991480)
+
+=== round 5: pool ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 0
+
+Throughput over 5 runs (ops/sec): median 14515307, best 14587945, worst 13928644
+Mean time per op (median run): 68.9 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42      125      209      333     973917
+  limit        548859       42      125      208      292     973917
+  market       100611       42      166      250      334       6875
+  cancel       350530       42      125      250      333       4750
+
+(checksum 63991480)
+
+=== round 5: pool+reserve ===
+Order flow: 1000000 ops (limit 548859, market 100611, cancel 350530), seed 42
+Timer: steady_clock resolution ~41 ns, empty-measurement p50 0 ns
+Index capacity hint: 262144
+
+Throughput over 5 runs (ops/sec): median 17754697, best 17970905, worst 17019937
+Mean time per op (median run): 56.3 ns
+Heap allocations: 0.611 per op; resting orders at end: 112515
+
+Latency per operation (ns, includes timer overhead):
+  op            count      p50      p90      p99    p99.9        max
+  all         1000000       42       84      209      334      30625
+  limit        548859       42       84      167      250      19709
+  market       100611       42      125      208      292       4375
+  cancel       350530       42      125      250      375      30625
+
+(checksum 63991480)

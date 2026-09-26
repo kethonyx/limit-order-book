@@ -3,7 +3,9 @@
 //   - per-operation latency percentiles, overall and per op type
 //   - heap allocations per op (global operator new is counted)
 //
-//   lob_bench [num_ops] [runs]
+//   lob_bench [num_ops] [runs] [reserve]
+//
+// reserve > 0 constructs the book with that capacity hint (see OrderBook).
 //
 // Build with the `release` preset; results from Debug builds are meaningless.
 
@@ -46,6 +48,7 @@ using Clock = std::chrono::steady_clock;
 
 // Keeps results observable so the optimizer cannot drop the work.
 std::uint64_t g_sink = 0;
+std::size_t g_reserve = 0;
 
 inline void apply(OrderBook& book, const Op& op, std::vector<Trade>& trades) {
     trades.clear();
@@ -63,7 +66,7 @@ struct ThroughputRun {
 };
 
 ThroughputRun run_throughput(const std::vector<Op>& ops) {
-    OrderBook book;
+    OrderBook book(g_reserve);
     std::vector<Trade> trades;
     trades.reserve(1024);
 
@@ -92,7 +95,7 @@ void print_latency_row(const char* name, std::vector<std::uint64_t>& ns) {
 }
 
 void run_latency(const std::vector<Op>& ops) {
-    OrderBook book;
+    OrderBook book(g_reserve);
     std::vector<Trade> trades;
     trades.reserve(1024);
 
@@ -146,6 +149,7 @@ int main(int argc, char** argv) {
     int runs = 5;
     if (argc > 1) cfg.num_ops = std::stoull(argv[1]);
     if (argc > 2) runs = std::stoi(argv[2]);
+    if (argc > 3) g_reserve = std::stoull(argv[3]);
 
     const std::vector<Op> ops = generate_flow(cfg);
     std::size_t counts[3] = {};
@@ -154,6 +158,7 @@ int main(int argc, char** argv) {
     std::printf("Order flow: %zu ops (limit %zu, market %zu, cancel %zu), seed %llu\n", ops.size(), counts[0],
                 counts[1], counts[2], static_cast<unsigned long long>(cfg.seed));
     print_timer_info();
+    std::printf("Index capacity hint: %zu\n", g_reserve);
 
     run_throughput(ops);  // warm-up: page in memory, warm caches and branch predictors
 

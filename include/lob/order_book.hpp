@@ -2,12 +2,12 @@
 
 #include <cstddef>
 #include <functional>
-#include <list>
 #include <map>
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
+#include "lob/object_pool.hpp"
 #include "lob/types.hpp"
 
 namespace lob {
@@ -36,10 +36,25 @@ struct LevelView {
 //
 //   bids_ : price -> Level, best (highest) price first
 //   asks_ : price -> Level, best (lowest) price first
-//   Level : FIFO list of resting orders at that price
-//   index_: OrderId -> position in its level, for O(1) lookup on cancel
+//   Level : intrusive doubly-linked FIFO of resting orders at that price
+//   index_: OrderId -> node, for O(1) lookup on cancel
+//   pool_ : owns all order nodes, so resting an order does not call malloc
+//
+// Not copyable: nodes hold pointers into this book's own levels.
 class OrderBook {
 public:
+    OrderBook() = default;
+
+    // Optional capacity hint: pre-sizes the id index for this many live orders
+    // so it never rehashes below that size. A rehash moves every entry at once
+    // and shows up as a ~1 ms latency outlier at ~100k resting orders.
+    explicit OrderBook(std::size_t expected_orders) { index_.reserve(expected_orders); }
+    OrderBook(const OrderBook&) = delete;
+    OrderBook& operator=(const OrderBook&) = delete;
+    OrderBook(OrderBook&&) = default;
+    OrderBook& operator=(OrderBook&&) = default;
+    ~OrderBook() = default;
+
     // Submits an order. Trades are appended to `trades` (not cleared), so the
     // caller can reuse one buffer across calls and avoid reallocations.
     //
@@ -75,22 +90,32 @@ public:
     }
 
 private:
-    using OrderList = std::list<Order>;
+    struct Level;
+
+    // One resting order. prev/next link it into its level's FIFO; `level`
+    // lets cancel find the level without a map lookup.
+    struct OrderNode {
+        Order order;
+        OrderNode* prev = nullptr;
+        OrderNode* next = nullptr;
+        Level* level = nullptr;
+    };
 
     struct Level {
         Qty total_qty{};
-        OrderList orders;  // front = oldest = first to fill
+        std::size_t count{};
+        OrderNode* head = nullptr;  // oldest = first to fill
+        OrderNode* tail = nullptr;
+
+        [[nodiscard]] bool empty() const noexcept { return head == nullptr; }
+        void push_back(OrderNode* node) noexcept;
+        void unlink(OrderNode* node) noexcept;
     };
 
+    // std::map nodes never move, so Level* stored in OrderNode stays valid
+    // until that level is erased (which only happens once it is empty).
     using Bids = std::map<Price, Level, std::greater<>>;
     using Asks = std::map<Price, Level, std::less<>>;
-
-    // std::list iterators stay valid until that element is erased, so they can
-    // be stored and used later for O(1) removal.
-    struct Locator {
-        Level* level;
-        OrderList::iterator it;
-    };
 
     Status validate(const Order& order) const;
 
@@ -104,7 +129,8 @@ private:
 
     Bids bids_;
     Asks asks_;
-    std::unordered_map<OrderId, Locator> index_;
+    std::unordered_map<OrderId, OrderNode*> index_;
+    ObjectPool<OrderNode> pool_;
 };
 
 }  // namespace lob
