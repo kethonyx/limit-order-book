@@ -25,13 +25,19 @@ include(Sanitizers)
 # --- Core library -----------------------------------------------------------
 add_library(lob STATIC
     src/types.cpp
-    src/order_book.cpp)
+    src/order_book.cpp
+    src/parser.cpp)
 add_library(lob::lob ALIAS lob)
 
 target_include_directories(lob PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 lob_set_warnings(lob)
 lob_enable_sanitizers(lob)
+
+# --- CLI demo ---------------------------------------------------------------
+add_executable(lob_cli apps/cli/main.cpp)
+target_link_libraries(lob_cli PRIVATE lob::lob)
+lob_set_warnings(lob_cli)
 
 # --- Tests ------------------------------------------------------------------
 if(LOB_BUILD_TESTS)

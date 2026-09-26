@@ -1,0 +1,33 @@
+# Sample session for lob_cli. Prices in dollars (tick = 0.01), quantities in shares.
+
+# Build a book: three asks, two bids
+LIMIT 1 SELL 101.00 50
+LIMIT 2 SELL 101.00 30     # same price as #1, queued behind it (FIFO)
+LIMIT 3 SELL 101.50 40
+LIMIT 4 BUY  100.00 60
+LIMIT 5 BUY   99.50 25
+PRINT
+
+# Aggressive buy sweeps two levels: fills #1 (50), #2 (30), then 10 of #3 at 101.50
+LIMIT 6 BUY 101.50 90
+PRINT
+
+# Market sell larger than all bids: fills 60 + 25, remaining 15 is cancelled (IOC)
+MARKET 7 SELL 100
+
+# Cancels: one live, one already filled, one that never existed
+LIMIT 8 BUY 100.25 10
+CANCEL 8
+CANCEL 1
+CANCEL 999
+
+# Modify: reduce keeps priority, reprice to cross trades immediately
+LIMIT 9 BUY 100.00 20
+MODIFY 9 100.00 15
+MODIFY 9 101.50 15
+
+# Invalid input is rejected, not crashed on
+LIMIT 10 BUY 100.00 0
+LIMIT 11 BUY 100.00 -5
+LIMIT 12 BUY 0 5
+LIMIT 3 SELL 102.00 5      # duplicate id (#3 still resting)

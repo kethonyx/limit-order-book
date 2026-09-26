@@ -12,12 +12,13 @@
 
 namespace lob {
 
-// Outcome of submitting an order. filled + rested == original qty for an
-// accepted limit order.
+// Outcome of submitting an order. For an accepted order,
+// filled + rested + cancelled == original quantity.
 struct ExecResult {
     Status status{Status::Accepted};
-    Qty filled{};  // quantity executed against resting orders
-    Qty rested{};  // quantity left resting in the book (limit orders)
+    Qty filled{};     // quantity executed against resting orders
+    Qty rested{};     // quantity left resting in the book (limit orders only)
+    Qty cancelled{};  // unfilled quantity discarded (market orders only)
 
     friend bool operator==(const ExecResult&, const ExecResult&) = default;
 };
@@ -41,7 +42,22 @@ class OrderBook {
 public:
     // Submits an order. Trades are appended to `trades` (not cleared), so the
     // caller can reuse one buffer across calls and avoid reallocations.
+    //
+    // Market orders are immediate-or-cancel: they sweep the opposite side at
+    // any price until filled or the side is empty; the remainder is cancelled
+    // (reported in ExecResult::cancelled), never rested.
     ExecResult add(const Order& order, std::vector<Trade>& trades);
+
+    // Removes a resting order. UnknownId if it never existed, was already
+    // cancelled, or was fully filled (filled orders leave the book).
+    Status cancel(OrderId id);
+
+    // Changes a resting limit order's price and/or quantity.
+    //  - same price, smaller qty: reduced in place, keeps time priority
+    //  - anything else: cancel + re-add, loses time priority and may trade
+    // The id stays the same. UnknownId if not resting; InvalidQty/InvalidPrice
+    // for bad new values (the original order is then left untouched).
+    ExecResult modify(OrderId id, Price new_price, Qty new_qty, std::vector<Trade>& trades);
 
     [[nodiscard]] std::optional<Price> best_bid() const;
     [[nodiscard]] std::optional<Price> best_ask() const;

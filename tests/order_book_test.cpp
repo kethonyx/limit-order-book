@@ -76,5 +76,45 @@ TEST_F(OrderBookTest, RejectsInvalidOrders) {
     EXPECT_EQ(book.order_count(), 1u);
 }
 
+Order market(OrderId id, Side side, Qty qty) {
+    return {.id = id, .side = side, .type = OrderType::Market, .price = 0, .qty = qty};
+}
+
+TEST_F(OrderBookTest, MarketOrderFillsAtAnyPrice) {
+    add(limit(1, Side::Sell, 100, 5));
+    add(limit(2, Side::Sell, 150, 5));
+    const auto r = add(market(3, Side::Buy, 10));
+
+    EXPECT_EQ(r, (ExecResult{.status = Status::Accepted, .filled = 10, .rested = 0, .cancelled = 0}));
+    EXPECT_FALSE(book.best_ask());
+}
+
+TEST_F(OrderBookTest, MarketOrderRemainderIsCancelledNotRested) {
+    add(limit(1, Side::Buy, 100, 4));
+    const auto r = add(market(2, Side::Sell, 10));
+
+    EXPECT_EQ(r, (ExecResult{.status = Status::Accepted, .filled = 4, .rested = 0, .cancelled = 6}));
+    EXPECT_FALSE(book.best_ask());
+    EXPECT_FALSE(book.contains(2));
+}
+
+TEST_F(OrderBookTest, CancelRemovesOrderAndEmptyLevel) {
+    add(limit(1, Side::Buy, 100, 5));
+    EXPECT_EQ(book.cancel(1), Status::Accepted);
+    EXPECT_FALSE(book.best_bid());
+    EXPECT_EQ(book.level_count(Side::Buy), 0u);
+    EXPECT_EQ(book.cancel(1), Status::UnknownId);
+}
+
+TEST_F(OrderBookTest, ModifyReduceKeepsPriority) {
+    add(limit(1, Side::Sell, 100, 10));
+    add(limit(2, Side::Sell, 100, 10));
+    EXPECT_EQ(book.modify(1, 100, 4, trades).status, Status::Accepted);
+
+    add(limit(3, Side::Buy, 100, 4));
+    ASSERT_EQ(trades.size(), 1u);
+    EXPECT_EQ(trades[0].sell_id, 1u);  // still first in the queue
+}
+
 }  // namespace
 }  // namespace lob
