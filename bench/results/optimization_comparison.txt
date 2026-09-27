@@ -1,7 +1,7 @@
-# Phase 6: before/after, interleaved (baseline, pool, pool+reserve) x 5 rounds
-#   baseline     = commit c3c7412 (std::list per level)
-#   pool         = this commit, OrderBook{} (intrusive list + ObjectPool)
-#   pool+reserve = this commit, OrderBook{262144} (index pre-sized; bench arg 3)
+# Optimization before/after, interleaved (baseline, pool, pool+reserve) x 5 rounds
+#   baseline     = commit 4f89245 (std::list per level)
+#   pool         = commit ba9862b, OrderBook{} (intrusive list + ObjectPool)
+#   pool+reserve = commit ba9862b, OrderBook{262144} (index pre-sized; bench arg 3)
 # date: 2026-09-26T12:26Z
 # machine: MacBookPro17,1, Apple M1, 8 cores (4 P + 4 E), 8 GB RAM
 # os: macOS 26.3.1; compiler: Apple clang version 17.0.0 (clang-1700.0.13.3)
