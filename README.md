@@ -1,4 +1,4 @@
-# order-book
+# limit-order-book
 
 A single-instrument **limit order book matching engine** in C++20. Supports limit, market, cancel and
 modify orders with price-time priority, and was measured before and after one allocation-focused
